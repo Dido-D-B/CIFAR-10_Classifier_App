@@ -266,9 +266,8 @@ def create_enhanced_probability_chart(preds, top_3_idx, top_3_probs):
         margin=dict(t=80, b=120, l=50, r=50),
         showlegend=False,
         plot_bgcolor='white',
-        title_x=0.5,
         font=dict(size=14)
-    )
+)
 
     # Axes tweaks
     fig.update_xaxes(
