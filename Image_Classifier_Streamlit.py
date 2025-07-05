@@ -381,6 +381,7 @@ This project aims to demonstrate the power of transfer learning for small-scale 
     st.subheader("Challenges")
     st.markdown("""
 Throughout this project, several practical challenges emerged that shaped both the modeling strategy and the final results:
+                
 * **Small Training Set:** With only 10,000 training images (a subset of CIFAR-10), the model was prone to overfitting and struggled to generalize to the test set. More data would likely yield significant gains.
 * **Low Resolution Images:** ResNet50 is designed for larger inputs (224x224), while CIFAR-10 images are 32x32. Upsampling helps but cannot fully recover lost detail, limiting feature extraction quality.
 * **Confusing Classes:** Classes like cat, dog, and bird are visually similar and small in frame. Even with augmentation and label smoothing, precision and recall for these classes remained lower.
@@ -643,6 +644,7 @@ elif section == "Model Insights":
         st.subheader("Performance Metrics")
         st.markdown("""
         - Model: ResNet50 Fine-tuned on CIFAR-10            
+        - Validation Accuracy: **~68%**
         - Test Accuracy: **~65%**
         - Training Accuracy: **~67%**
         - Optimizer: AdamW
