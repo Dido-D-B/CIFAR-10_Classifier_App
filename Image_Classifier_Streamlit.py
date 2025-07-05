@@ -1,7 +1,7 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageFilter, ImageEnhance
 import matplotlib.pyplot as plt
 import pandas as pd
 import os
@@ -25,6 +25,10 @@ FEEDBACK_FILE = "feedback_log.csv"
 USAGE_METRICS_FILE = "usage_metrics.csv"
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp']
+DISPLAY_UPSCALE_FACTOR = 4
+DISPLAY_SHARPEN_STRENGTH = 1.5
+DISPLAY_UNSHARP_RADIUS = 2
+DISPLAY_UNSHARP_PERCENT = 150
 
 # PAGE CONFIG
 st.set_page_config(
@@ -216,22 +220,70 @@ def load_feedback_log():
 def create_enhanced_probability_chart(preds, top_3_idx, top_3_probs):
     fig = make_subplots(
         rows=2, cols=1,
-        subplot_titles=('All Class Probabilities', 'Top 3 Predictions'),
-        row_heights=[0.6, 0.4],
-        vertical_spacing=0.1
+        subplot_titles=(
+            '<b>All Class Probabilities</b>',
+            '<b>Top 3 Predictions</b>'
+        ),
+        row_heights=[0.55, 0.45],
+        vertical_spacing=0.15
     )
-    colors = ['#ff6b6b' if i == np.argmax(preds[0]) else '#4ecdc4' for i in range(len(CLASSES))]
+
+    # Improved color scheme
+    main_colors = ['#FF6361' if i == np.argmax(preds[0]) else '#58508D' for i in range(len(CLASSES))]
+    top_colors = ['#FFA600', '#FF6361', '#BC5090']
+
+    # ALL CLASSES
     fig.add_trace(
-        go.Bar(x=CLASSES, y=preds[0], marker_color=colors, text=[f'{p:.1%}' for p in preds[0]], textposition='auto'),
+        go.Bar(
+            x=CLASSES,
+            y=preds[0],
+            marker_color=main_colors,
+            text=[f'{p:.1%}' for p in preds[0]],
+            textposition='outside',
+            opacity=0.85,
+            hovertemplate='%{x}: %{y:.2%}<extra></extra>'
+        ),
         row=1, col=1
     )
+
+    # TOP 3 ONLY
     fig.add_trace(
-        go.Bar(x=[CLASSES[i] for i in top_3_idx], y=top_3_probs,
-               marker_color=['#ff6b6b','#ffa726','#66bb6a'], text=[f'{p:.1%}' for p in top_3_probs], textposition='auto'),
+        go.Bar(
+            x=[CLASSES[i] for i in top_3_idx],
+            y=top_3_probs,
+            marker_color=top_colors,
+            text=[f'{p:.1%}' for p in top_3_probs],
+            textposition='outside',
+            opacity=0.9,
+            hovertemplate='%{x}: %{y:.2%}<extra></extra>'
+        ),
         row=2, col=1
     )
-    fig.update_layout(height=600, showlegend=False, title_text="Model Predictions Analysis", title_x=0.5)
-    fig.update_xaxes(tickangle=45)
+
+    # Global layout
+    fig.update_layout(
+        height=700,
+        margin=dict(t=70, b=50, l=30, r=30),
+        showlegend=False,
+        plot_bgcolor='white',
+        title_text="🔎 Model Predictions Analysis",
+        title_x=0.5,
+        font=dict(size=14)
+    )
+
+    # Axes tweaks
+    fig.update_xaxes(
+        tickangle=45,
+        showgrid=False,
+        zeroline=False
+    )
+    fig.update_yaxes(
+        tickformat=".0%",
+        showgrid=True,
+        gridcolor='rgba(200,200,200,0.3)',
+        zeroline=False
+    )
+
     return fig
 
 def display_confidence_meter(confidence):
@@ -367,7 +419,7 @@ if section == "Upload Your Image":
                 with c3:
                     if st.button("🤔 Unsure"):
                         st.info("No worries! Try another image.")
-
+        
 elif section == "CIFAR-10 Samples":
     st.header("CIFAR-10 Sample Classification")
 
@@ -385,48 +437,40 @@ elif section == "CIFAR-10 Samples":
                 st.rerun()
 
         with col2:
-            st.info("**Tip:** Random sampling helps explore different categories!")
+            st.info("**Tip:** Random sampling helps explore different categories!")        
 
-        # Add image enhancement controls
-        st.subheader("Image Enhancement")
-        col_enhance1, col_enhance2 = st.columns(2)
-        
-        with col_enhance1:
-            upscale_factor = st.slider("Upscale Factor", 4, 16, 8, 1, 
-                                     help="Increase size for better visibility")
-        
-        with col_enhance2:
-            deblur_strength = st.slider("Deblur Strength", 0.0, 3.0, 1.0, 0.1,
-                                      help="Higher values = more deblurring")
-
-        # Get the sample image
+        # Get the sample image (keep the raw numpy array unchanged for prediction)
         sample_image = cifar_images[st.session_state.sample_idx]
-        
-        # Create enhanced version for display
-        enhanced_image = Image.fromarray(sample_image)
-        
-        # Upscale the image using LANCZOS resampling for better quality
-        new_size = (32 * upscale_factor, 32 * upscale_factor)
-        enhanced_image = enhanced_image.resize(new_size, Image.Resampling.LANCZOS)
-        
-        # Apply deblurring (sharpening filter)
-        if deblur_strength > 0:
-            from PIL import ImageEnhance
-            enhancer = ImageEnhance.Sharpness(enhanced_image)
-            enhanced_image = enhancer.enhance(1.0 + deblur_strength)
-        
+
+        # Create a *separate* enhanced DISPLAY IMAGE ONLY (don't modify sample_image itself)
+        display_image = Image.fromarray(sample_image)
+
+        # Upscale for clearer human viewing with LANCZOS resampling
+        upscale_factor = 8
+        upscale_size = (32 * upscale_factor, 32 * upscale_factor)
+        display_image = display_image.resize(upscale_size, Image.Resampling.LANCZOS)
+
+        # Apply enhancements only for display
+        display_image = ImageEnhance.Contrast(display_image).enhance(1.3)
+        display_image = ImageEnhance.Sharpness(display_image).enhance(2.0)
+        display_image = ImageEnhance.Color(display_image).enhance(1.2)
+        display_image = display_image.filter(
+            ImageFilter.UnsharpMask(radius=1.0, percent=200, threshold=2)
+        )
+            
         # Display images side by side
         col_img1, col_img2 = st.columns(2)
         
         with col_img1:
             st.markdown("**Original (32×32)**")
-            st.image(sample_image, caption=f"Sample #{st.session_state.sample_idx}", 
-                    width=150)  # Fixed small size
+            # Show original at a reasonable size without blur
+            original_display = Image.fromarray(sample_image)
+            original_display = original_display.resize((128, 128), Image.Resampling.NEAREST)
+            st.image(original_display, caption=f"Sample #{st.session_state.sample_idx}")
         
         with col_img2:
-            st.markdown(f"**Enhanced ({new_size[0]}×{new_size[1]})**")
-            st.image(enhanced_image, caption=f"Upscaled & Deblurred", 
-                    width=300)  # Larger but controlled size
+            st.markdown(f"**Enhanced Display ({upscale_size[0]}×{upscale_size[1]})**")
+            st.image(display_image, caption="Enhanced for Clarity", use_container_width=True)
 
         # Use original image for prediction (not the enhanced one)
         input_array = preprocess_image_array(sample_image)
@@ -463,7 +507,7 @@ elif section == "CIFAR-10 Samples":
             if show_probabilities:
                 st.subheader("Probability Distribution")
                 st.plotly_chart(create_enhanced_probability_chart(preds, top_3_idx, top_3_probs), use_container_width=True)
-                
+            
 # ANALYTICS DASHBOARD                
 elif section == "Analytics Dashboard":
     st.header("Analytics Dashboard")
