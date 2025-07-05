@@ -262,11 +262,11 @@ def create_enhanced_probability_chart(preds, top_3_idx, top_3_probs):
 
     # Global layout
     fig.update_layout(
-        height=700,
-        margin=dict(t=70, b=50, l=30, r=30),
+        height=750,
+        margin=dict(t=80, b=120, l=50, r=50),
         showlegend=False,
         plot_bgcolor='white',
-        title_text="🔎 Model Predictions Analysis",
+        title_text="Model Predictions Analysis",
         title_x=0.5,
         font=dict(size=14)
     )
