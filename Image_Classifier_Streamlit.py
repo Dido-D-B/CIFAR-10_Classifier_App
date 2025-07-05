@@ -310,25 +310,20 @@ cifar_images, cifar_labels = load_cifar_samples()
 st.markdown("""
 <div class="main-header">
     <h1>CIFAR-10 AI Image Classifier</h1>
-    <p>Powered by ResNet50 Deep Learning | Computer Vision Project by Dido De Boodt</p>
+    <p>
+    Powered by ResNet50 Deep Learning | Computer Vision Project by 
+    <a href="https://www.linkedin.com/in/dido-de-boodt/" target="_blank" style="color: #ffffff; text-decoration: underline;">
+    <strong>Dido De Boodt</strong>
+    </a>
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
 # SIDEBAR
-with st.sidebar.expander("About This Project"):
-    st.markdown("""
-    Welcome to the **CIFAR-10 AI Image Classifier**! This application uses a fine-tuned ResNet50 model to classify images from the CIFAR-10 dataset.           
-    
-    **Architecture:** ResNet50 (Fine-tuned on CIFAR-10)  
-    **Classes:** 10 categories  
-    **Input Size:** 32×32 pixels  
-    **Reported Accuracy:** ~65% on test set ~67% on train set
-    """)
-
 st.sidebar.header("Navigation")
 section = st.sidebar.radio(
     "Go to:",
-    ("Upload Your Image", "CIFAR-10 Samples", "Analytics Dashboard", "Model Insights")
+    ("About this Project", "Model Insights", "Upload Your Image", "CIFAR-10 Samples", "Analytics Dashboard")
 )
 
 st.sidebar.header("Session Stats")
@@ -350,8 +345,66 @@ with st.sidebar.expander("Advanced Settings"):
         st.warning("⚠️ Extreme thresholds may reduce useful predictions!")
 
 # MAIN CONTENT
+if section == "About this Project":
+    st.header("About this Project")
+    st.markdown("""
+The goal of this project is to build an **image classification model** for the CIFAR-10 dataset using transfer learning with **ResNet50**.
+
+**CIFAR-10** is a well-known computer vision benchmark containing 60,000 32×32 color images across 10 mutually exclusive classes. 
+""")
+    # Display dataset images and class distribution
+    st.subheader("CIFAR-10 Dataset Overview")
+    # Format images for display
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.image("cifar.png", caption="CIFAR-10 Dataset", use_container_width=True)
+
+    with col2:
+        st.image("class_distribution.png", caption="CIFAR-10 Class Distribution", use_container_width=True)
+    
+    st.subheader("Project Overview")
+    st.markdown("""
+ For this project, we constrain ourselves to 10,000 training samples to simulate limited-data scenarios and reduce training time. Our approach leverages a **pretrained ResNet50 model** (trained on ImageNet) as a feature extractor. We first freeze the pretrained layers and train only the custom classification head, then unfreeze the entire network for fine-tuning.
+
+* Importing and exploring the CIFAR-10 dataset
+* Preprocessing images for ResNet50
+* Building a transfer learning pipeline with a frozen base model
+* Training a custom classification head
+* Fine-tuning the entire model
+* Evaluating model performance on the test set
+
+This project aims to demonstrate the power of transfer learning for small-scale datasets, highlight practical techniques for fine-tuning deep networks, and develop hands-on experience with modern computer vision workflows.
+""")
+    
+    st.subheader("Challenges")
+    st.markdown("""
+Throughout this project, several practical challenges emerged that shaped both the modeling strategy and the final results:
+* **Small Training Set:** With only 10,000 training images (a subset of CIFAR-10), the model was prone to overfitting and struggled to generalize to the test set. More data would likely yield significant gains.
+* **Low Resolution Images:** ResNet50 is designed for larger inputs (224x224), while CIFAR-10 images are 32x32. Upsampling helps but cannot fully recover lost detail, limiting feature extraction quality.
+* **Confusing Classes:** Classes like cat, dog, and bird are visually similar and small in frame. Even with augmentation and label smoothing, precision and recall for these classes remained lower.
+* **Long Training Times:** Fine-tuning deeper layers (e.g. top 20) significantly increased training time per epoch. Iterating on hyperparameters required patience and careful planning.
+
+These challenges highlight the real-world complexity of adapting cutting-edge deep learning models to constrained datasets. An invaluable learning experience for deploying computer vision pipelines thoughtfully.
+""")
+    
+    st.subheader("Key Takeaways")
+    st.markdown("""
+✅  Even with limited data, transfer learning and careful fine-tuning can deliver solid results.
+
+✅ Layer-wise unfreezing with tuned learning rates is effective for adapting large models.
+
+✅ Visualization (accuracy/loss curves, confusion matrices) is essential for diagnosing model behavior and improving training strategy.
+
+✅ Data augmentation remains vital when working with small or imbalanced datasets.                
+""")
+    
 if section == "Upload Your Image":
     st.header("Upload Your Own Image")
+    st.markdown("""
+Classes: **airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck**
+                """)
 
     uploaded_file = st.file_uploader("Choose an image...", type=ALLOWED_EXTENSIONS)
 
@@ -552,14 +605,14 @@ elif section == "Analytics Dashboard":
             sample_feedback = feedback_df[feedback_df['image_type'] == 'cifar_sample']
             if not sample_feedback.empty:
                 class_acc = sample_feedback.groupby('prediction')['correct'].mean()
-                fig = px.bar(class_acc, labels={'value':'Accuracy'}, title="Prediction Accuracy by Class (CIFAR Samples)")
+                fig = px.bar(class_acc, labels={'value':'Accuracy'})
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("No CIFAR-10 sample feedback yet to calculate class-wise accuracy.")
 
         if 'confidence' in feedback_df.columns:
             st.subheader("Confidence Score Distribution")
-            fig = px.histogram(feedback_df, x='confidence', nbins=20, title="Confidence Distribution")
+            fig = px.histogram(feedback_df, x='confidence', nbins=20)
             st.plotly_chart(fig, use_container_width=True)
 
         with st.expander("Raw Feedback Data"):
@@ -595,34 +648,12 @@ elif section == "Model Insights":
         - Optimizer: AdamW
         - Learning Rate Scheduling over 4 phases
         - Data Augmentation applied
-        """)
-
-        st.subheader("Conclusion & Challenges")
-        st.markdown("""
-        This ResNet50-based CIFAR-10 classifier achieves approximately **65% test accuracy**, showing solid performance for a small, challenging 32×32 dataset.  
-
-        **Key strengths**:
-        - Learns diverse object categories with a deep architecture
-        - Data augmentation and learning-rate scheduling help generalize
-        - Interactive prediction app with user feedback tracking
-
-        **Challenges and Limitations**:
-        - Resolution of 32×32 limits fine-grained detail recognition
-        - Class confusion remains significant for similar categories
-        - Model may be over-parameterized for this small dataset
-        - Feedback-based improvement relies on user participation
-
-        **Future improvements** could include:
-        - Experimenting with more efficient architectures (e.g., EfficientNet)
-        - Adding test-time augmentation or ensembling
-        - Collecting more labeled feedback for fine-tuning
-        """)          
+        """)       
 
 # FOOTER            
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 2rem;">
     <p><strong>Enhanced CIFAR-10 Classifier</strong> | Built with Streamlit & TensorFlow</p>
-    <p><em>Providing intelligent image classification with professional-grade features</em></p>
 </div>
 """, unsafe_allow_html=True)
