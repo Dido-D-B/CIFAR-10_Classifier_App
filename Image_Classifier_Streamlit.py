@@ -368,7 +368,6 @@ if section == "Upload Your Image":
                     if st.button("🤔 Unsure"):
                         st.info("No worries! Try another image.")
 
-# CIFAR-10 SAMPLES
 elif section == "CIFAR-10 Samples":
     st.header("CIFAR-10 Sample Classification")
 
@@ -388,9 +387,48 @@ elif section == "CIFAR-10 Samples":
         with col2:
             st.info("**Tip:** Random sampling helps explore different categories!")
 
-        sample_image = cifar_images[st.session_state.sample_idx]
-        st.image(sample_image, caption=f"Sample #{st.session_state.sample_idx}", use_container_width=True)
+        # Add image enhancement controls
+        st.subheader("Image Enhancement")
+        col_enhance1, col_enhance2 = st.columns(2)
+        
+        with col_enhance1:
+            upscale_factor = st.slider("Upscale Factor", 4, 16, 8, 1, 
+                                     help="Increase size for better visibility")
+        
+        with col_enhance2:
+            deblur_strength = st.slider("Deblur Strength", 0.0, 3.0, 1.0, 0.1,
+                                      help="Higher values = more deblurring")
 
+        # Get the sample image
+        sample_image = cifar_images[st.session_state.sample_idx]
+        
+        # Create enhanced version for display
+        enhanced_image = Image.fromarray(sample_image)
+        
+        # Upscale the image using LANCZOS resampling for better quality
+        new_size = (32 * upscale_factor, 32 * upscale_factor)
+        enhanced_image = enhanced_image.resize(new_size, Image.Resampling.LANCZOS)
+        
+        # Apply deblurring (sharpening filter)
+        if deblur_strength > 0:
+            from PIL import ImageEnhance
+            enhancer = ImageEnhance.Sharpness(enhanced_image)
+            enhanced_image = enhancer.enhance(1.0 + deblur_strength)
+        
+        # Display images side by side
+        col_img1, col_img2 = st.columns(2)
+        
+        with col_img1:
+            st.markdown("**Original (32×32)**")
+            st.image(sample_image, caption=f"Sample #{st.session_state.sample_idx}", 
+                    width=150)  # Fixed small size
+        
+        with col_img2:
+            st.markdown(f"**Enhanced ({new_size[0]}×{new_size[1]})**")
+            st.image(enhanced_image, caption=f"Upscaled & Deblurred", 
+                    width=300)  # Larger but controlled size
+
+        # Use original image for prediction (not the enhanced one)
         input_array = preprocess_image_array(sample_image)
         result = make_prediction(input_array)
 
@@ -405,15 +443,27 @@ elif section == "CIFAR-10 Samples":
             log_feedback("cifar_sample", CLASSES[class_idx], is_correct, confidence, "sample_image", sample_idx=st.session_state.sample_idx)
 
             st.subheader("Classification Results")
-            st.success(f"**Prediction:** {CLASSES[class_idx]}")
-            st.write(f"Confidence: {confidence:.1%}")
+            
+            # Show true label vs prediction
+            col_result1, col_result2 = st.columns(2)
+            with col_result1:
+                st.success(f"**Prediction:** {CLASSES[class_idx]}")
+                st.write(f"Confidence: {confidence:.1%}")
+            
+            with col_result2:
+                st.info(f"**True Label:** {CLASSES[true_label_idx]}")
+                if is_correct:
+                    st.write("✅ **Correct Prediction!**")
+                else:
+                    st.write("❌ **Incorrect Prediction**")
+            
             st.write(f"Processing Time: {prediction_time:.2f}s")
             display_confidence_meter(confidence)
 
             if show_probabilities:
                 st.subheader("Probability Distribution")
                 st.plotly_chart(create_enhanced_probability_chart(preds, top_3_idx, top_3_probs), use_container_width=True)
-    
+                
 # ANALYTICS DASHBOARD                
 elif section == "Analytics Dashboard":
     st.header("Analytics Dashboard")

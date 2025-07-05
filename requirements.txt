@@ -1,7 +1,8 @@
-streamlit
-tensorflow==2.16.1
+streamlit==1.46.1
+tf-nightly
+numpy>=1.21.0
+pillow>=8.0.0
 keras
-numpy
 pandas
 scikit-learn
 scipy
@@ -9,5 +10,4 @@ matplotlib
 seaborn
 plotly
 pydeck
-pillow
 requests
