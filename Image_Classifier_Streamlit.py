@@ -18,11 +18,30 @@ from sklearn.metrics import confusion_matrix
 from keras.applications.resnet import preprocess_input
 import keras
 
+from pathlib import Path
+
+# PATHS
+THIS_FILE = Path(__file__).resolve()
+PROJECT_ROOT = THIS_FILE.parent if (THIS_FILE.parent / "models").exists() else THIS_FILE.parent
+if (PROJECT_ROOT.name == "app") and (PROJECT_ROOT.parent / "models").exists():
+    PROJECT_ROOT = PROJECT_ROOT.parent
+PATHS = {
+    "model": PROJECT_ROOT / "models" / "resnet50_cifar10.keras",
+    "cifar_samples": PROJECT_ROOT / "data" / "cifar_samples.npz",
+    "fig_training": PROJECT_ROOT / "reports" / "figures" / "training_metrics.png",
+    "fig_confusion": PROJECT_ROOT / "reports" / "figures" / "confusion_matrix_test.png",
+    "fig_cifar": PROJECT_ROOT / "reports" / "figures" / "cifar.png",
+    "fig_class_dist": PROJECT_ROOT / "reports" / "figures" / "class_distribution.png",
+    # Logs (keep at repo root)
+    "feedback_csv": PROJECT_ROOT / "feedback_log.csv",
+    "usage_csv": PROJECT_ROOT / "usage_metrics.csv",
+}
+
 # CONFIGURATION
 CLASSES = ['airplane', 'automobile', 'bird', 'cat', 'deer',
            'dog', 'frog', 'horse', 'ship', 'truck']
-FEEDBACK_FILE = "feedback_log.csv"
-USAGE_METRICS_FILE = "usage_metrics.csv"
+FEEDBACK_FILE = str(PATHS["feedback_csv"])
+USAGE_METRICS_FILE = str(PATHS["usage_csv"])
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'bmp']
 DISPLAY_UPSCALE_FACTOR = 4
@@ -106,7 +125,7 @@ if 'sample_idx' not in st.session_state:
 def load_model():
     with st.spinner("Loading AI model... This may take a moment."):
         try:
-            model = tf.keras.models.load_model('resnet50_cifar10.keras')
+            model = tf.keras.models.load_model(str(PATHS["model"]))
             return model
         except Exception as e:
             st.error(f"❌ Could not load model: {e}")
@@ -115,11 +134,12 @@ def load_model():
 @st.cache_data
 def load_cifar_samples():
     try:
-        data = np.load('cifar_samples.npz')
-        images = data['images']
-        labels = data['labels']
+        data = np.load(str(PATHS["cifar_samples"]))
+        images = data["images"]
+        labels = data["labels"]
         return images, labels
-    except Exception:
+    except Exception as e:
+        st.error(f"❌ Could not load CIFAR samples: {e}")
         return np.array([]), np.array([])
 
 def validate_image(uploaded_file):
@@ -359,10 +379,10 @@ The goal of this project is to build an **image classification model** for the C
     col1, col2 = st.columns(2)
 
     with col1:
-        st.image("cifar.png", caption="CIFAR-10 Dataset", use_container_width=True)
+        st.image(str(PATHS["fig_cifar"]), caption="CIFAR-10 Dataset", use_container_width=True)
 
     with col2:
-        st.image("class_distribution.png", caption="CIFAR-10 Class Distribution", use_container_width=True)
+        st.image(str(PATHS["fig_class_dist"]), caption="CIFAR-10 Class Distribution", use_container_width=True)
     
     st.subheader("Project Overview")
     st.markdown("""
@@ -627,11 +647,11 @@ elif section == "Model Insights":
 
         with col1:
             st.markdown("**Training Metrics**")
-            st.image("training_metrics.png", use_container_width=True)
+            st.image(str(PATHS["fig_training"]), use_container_width=True)
 
         with col2:
             st.markdown("**Confusion Matrix (Test Set 10,000 images)**")
-            st.image("confusion_matrix_test.png", use_container_width=True)
+            st.image(str(PATHS["fig_confusion"]), use_container_width=True)
 
         st.markdown("""
         These charts provide insight into model training:
